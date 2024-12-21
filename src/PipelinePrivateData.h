@@ -114,6 +114,21 @@ enum SpecialEffects : uint32_t
     REST_EFFECTS_COUNT
 };
 
+struct __declspec(novtable) CustomShaderInstance final
+{
+    reshade::api::pipeline pipeline = { 0 };
+    reshade::api::pipeline_layout pipelineLayout = { 0 };
+    reshade::api::sampler pipelineSampler = { 0 };
+};
+
+struct __declspec(novtable) CustomShader final
+{
+    CustomShaderInstance copyPipeline;
+    CustomShaderInstance alphaPreservingCopyPipeline;
+
+    reshade::api::resource fullscreenQuadVertexBuffer = { 0 };
+};
+
 struct __declspec(uuid("C63E95B1-4E2F-46D6-A276-E8B4612C069A")) DeviceDataContainer {
     reshade::api::effect_runtime* current_runtime = nullptr;
     std::atomic_bool rendered_effects = false;
@@ -123,6 +138,7 @@ struct __declspec(uuid("C63E95B1-4E2F-46D6-A276-E8B4612C069A")) DeviceDataContai
     std::unordered_set<const ShaderToggler::ToggleGroup*> constantsUpdated;
     std::unordered_set<const ShaderToggler::ToggleGroup*> srvUpdated;
     HuntPreview huntPreview;
+    CustomShader customShader;
 };
 
 struct __declspec(uuid("838BAF1D-95C0-4A7E-A517-052642879986")) RuntimeDataContainer {

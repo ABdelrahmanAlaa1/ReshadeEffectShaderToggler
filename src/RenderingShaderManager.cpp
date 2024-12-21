@@ -71,7 +71,7 @@ bool RenderingShaderManager::CreatePipeline(reshade::api::device* device, reshad
     return false;
 }
 
-void RenderingShaderManager::InitShader(reshade::api::device* device, uint16_t ps_resource_id, uint16_t vs_resource_id, reshade::api::pipeline& sh_pipeline, reshade::api::pipeline_layout& sh_layout, reshade::api::sampler& sh_sampler)
+void RenderingShaderManager::InitShader(reshade::api::device* device, uint16_t ps_resource_id, uint16_t vs_resource_id, reshade::api::pipeline& sh_pipeline, reshade::api::pipeline_layout& sh_layout, reshade::api::sampler& sh_sampler, resource& quad, uint8_t write_mask)
 {
     if (sh_pipeline == 0 && (device->get_api() == device_api::d3d9 || device->get_api() == device_api::d3d10 || device->get_api() == device_api::d3d11 || device->get_api() == device_api::d3d12))
     {
@@ -86,7 +86,7 @@ void RenderingShaderManager::InitShader(reshade::api::device* device, uint16_t p
         layout_params[1] = descriptor_range{ 0, 0, 0, 1, shader_stage::all, 1, descriptor_type::shader_resource_view };
 
         if (!device->create_pipeline_layout(2, layout_params, &sh_layout) ||
-            !CreatePipeline(device, sh_layout, ps_resource_id, vs_resource_id, sh_pipeline) ||
+            !CreatePipeline(device, sh_layout, ps_resource_id, vs_resource_id, sh_pipeline, write_mask) ||
             !device->create_sampler(sampler_desc, &sh_sampler))
         {
             sh_pipeline = {};
@@ -95,11 +95,11 @@ void RenderingShaderManager::InitShader(reshade::api::device* device, uint16_t p
             reshade::log::message(reshade::log::level::warning, "Unable to create preview copy pipeline");
         }
 
-        if (fullscreenQuadVertexBuffer == 0 && device->get_api() == device_api::d3d9)
+        if (quad == 0 && device->get_api() == device_api::d3d9)
         {
             const uint32_t num_vertices = 4;
 
-            if (!device->create_resource(resource_desc(num_vertices * sizeof(vert_input), memory_heap::cpu_to_gpu, resource_usage::vertex_buffer), nullptr, resource_usage::cpu_access, &fullscreenQuadVertexBuffer))
+            if (!device->create_resource(resource_desc(num_vertices * sizeof(vert_input), memory_heap::cpu_to_gpu, resource_usage::vertex_buffer), nullptr, resource_usage::cpu_access, &quad))
             {
                 reshade::log::message(reshade::log::level::warning, "Unable to create preview copy pipeline vertex buffer");
             }
@@ -114,10 +114,10 @@ void RenderingShaderManager::InitShader(reshade::api::device* device, uint16_t p
 
                 void* host_memory;
 
-                if (device->map_buffer_region(fullscreenQuadVertexBuffer, 0, UINT64_MAX, map_access::write_only, &host_memory))
+                if (device->map_buffer_region(quad, 0, UINT64_MAX, map_access::write_only, &host_memory))
                 {
                     memcpy(host_memory, vertices, num_vertices * sizeof(vert_input));
-                    device->unmap_buffer_region(fullscreenQuadVertexBuffer);
+                    device->unmap_buffer_region(quad);
                 }
             }
         }
@@ -126,55 +126,103 @@ void RenderingShaderManager::InitShader(reshade::api::device* device, uint16_t p
 
 void RenderingShaderManager::InitShaders(reshade::api::device* device)
 {
+    DeviceDataContainer& shader = device->get_private_data<DeviceDataContainer>();
+
     if (device->get_api() == device_api::d3d9)
     {
-        InitShader(device, SHADER_PREVIEW_COPY_PS_3_0, SHADER_FULLSCREEN_VS_3_0, copyPipeline, copyPipelineLayout, copyPipelineSampler);
-        CreatePipeline(device, copyPipelineLayout, SHADER_PREVIEW_COPY_PS_3_0, SHADER_FULLSCREEN_VS_3_0, copyPipelineAlpha, 0x7);
+        InitShader(
+            device,
+            SHADER_PREVIEW_COPY_PS_3_0,
+            SHADER_FULLSCREEN_VS_3_0,
+            shader.customShader.copyPipeline.pipeline,
+            shader.customShader.copyPipeline.pipelineLayout,
+            shader.customShader.copyPipeline.pipelineSampler,
+            shader.customShader.fullscreenQuadVertexBuffer,
+            0xF);
+        InitShader(
+            device,
+            SHADER_PREVIEW_COPY_PS_3_0,
+            SHADER_FULLSCREEN_VS_3_0,
+            shader.customShader.alphaPreservingCopyPipeline.pipeline,
+            shader.customShader.alphaPreservingCopyPipeline.pipelineLayout,
+            shader.customShader.alphaPreservingCopyPipeline.pipelineSampler,
+            shader.customShader.fullscreenQuadVertexBuffer,
+            0x7);
     }
     else
     {
-        InitShader(device, SHADER_PREVIEW_COPY_PS_4_0, SHADER_FULLSCREEN_VS_4_0, copyPipeline, copyPipelineLayout, copyPipelineSampler);
-        CreatePipeline(device, copyPipelineLayout, SHADER_PREVIEW_COPY_PS_4_0, SHADER_FULLSCREEN_VS_4_0, copyPipelineAlpha, 0x7);
+        InitShader(
+            device,
+            SHADER_PREVIEW_COPY_PS_4_0,
+            SHADER_FULLSCREEN_VS_4_0,
+            shader.customShader.copyPipeline.pipeline,
+            shader.customShader.copyPipeline.pipelineLayout,
+            shader.customShader.copyPipeline.pipelineSampler,
+            shader.customShader.fullscreenQuadVertexBuffer,
+            0xF);
+        InitShader(
+            device,
+            SHADER_PREVIEW_COPY_PS_4_0,
+            SHADER_FULLSCREEN_VS_4_0,
+            shader.customShader.alphaPreservingCopyPipeline.pipeline,
+            shader.customShader.alphaPreservingCopyPipeline.pipelineLayout,
+            shader.customShader.alphaPreservingCopyPipeline.pipelineSampler,
+            shader.customShader.fullscreenQuadVertexBuffer,
+            0x7);
     }
 }
 
 void RenderingShaderManager::DestroyShaders(reshade::api::device* device)
 {
-    if (copyPipeline != 0)
+    DeviceDataContainer& shader = device->get_private_data<DeviceDataContainer>();
+
+    if (shader.customShader.fullscreenQuadVertexBuffer != 0)
     {
-        //device->destroy_pipeline(copyPipeline);
-        copyPipeline = {};
+        device->destroy_resource(shader.customShader.fullscreenQuadVertexBuffer);
+        shader.customShader.fullscreenQuadVertexBuffer = { 0 };
     }
 
-    if (copyPipelineAlpha != 0)
+    if (shader.customShader.copyPipeline.pipeline != 0)
     {
-        //device->destroy_pipeline(copyPipelineAlpha);
-        copyPipelineAlpha = {};
+        device->destroy_pipeline(shader.customShader.copyPipeline.pipeline);
+        shader.customShader.copyPipeline.pipeline = { 0 };
     }
 
-    if (copyPipelineLayout != 0)
+    if (shader.customShader.alphaPreservingCopyPipeline.pipeline != 0)
     {
-        //device->destroy_pipeline_layout(copyPipelineLayout);
-        copyPipelineLayout = {};
+        device->destroy_pipeline(shader.customShader.alphaPreservingCopyPipeline.pipeline);
+        shader.customShader.alphaPreservingCopyPipeline.pipeline = { 0 };
     }
 
-    if (copyPipelineSampler != 0)
+    if (shader.customShader.copyPipeline.pipelineLayout != 0)
     {
-        //device->destroy_sampler(copyPipelineSampler);
-        copyPipelineSampler = {};
+        device->destroy_pipeline_layout(shader.customShader.copyPipeline.pipelineLayout);
+        shader.customShader.copyPipeline.pipelineLayout = { 0 };
+    }
+
+    if (shader.customShader.alphaPreservingCopyPipeline.pipelineLayout != 0)
+    {
+        device->destroy_pipeline_layout(shader.customShader.alphaPreservingCopyPipeline.pipelineLayout);
+        shader.customShader.alphaPreservingCopyPipeline.pipelineLayout = { 0 };
+    }
+
+    if (shader.customShader.copyPipeline.pipelineSampler != 0)
+    {
+        device->destroy_sampler(shader.customShader.copyPipeline.pipelineSampler);
+        shader.customShader.copyPipeline.pipelineSampler = { 0 };
+    }
+
+    if (shader.customShader.alphaPreservingCopyPipeline.pipelineSampler != 0)
+    {
+        device->destroy_sampler(shader.customShader.alphaPreservingCopyPipeline.pipelineSampler);
+        shader.customShader.alphaPreservingCopyPipeline.pipelineSampler = { 0 };
     }
 }
 
 void RenderingShaderManager::ApplyShader(command_list* cmd_list, resource_view srv_src, resource_view rtv_dst, pipeline& sh_pipeline,
-    pipeline_layout& sh_layout, sampler& sh_sampler, uint32_t width, uint32_t height)
+    pipeline_layout& sh_layout, sampler& sh_sampler, resource& quad, uint32_t width, uint32_t height)
 {
     device* device = cmd_list->get_device();
-
-    //if (device->get_api() == device_api::d3d12)
-    //{
-    //    DestroyShaders(device);
-    //    InitShaders(device);
-    //}
 
     if (sh_pipeline == 0 || !(device->get_api() == device_api::d3d9 || device->get_api() == device_api::d3d10 || device->get_api() == device_api::d3d11 || device->get_api() == device_api::d3d12))
     {
@@ -199,7 +247,7 @@ void RenderingShaderManager::ApplyShader(command_list* cmd_list, resource_view s
     if (cmd_list->get_device()->get_api() == device_api::d3d9)
     {
         cmd_list->bind_pipeline_state(dynamic_state::primitive_topology, static_cast<uint32_t>(primitive_topology::triangle_strip));
-        cmd_list->bind_vertex_buffer(0, fullscreenQuadVertexBuffer, 0, sizeof(vert_input));
+        cmd_list->bind_vertex_buffer(0, quad, 0, sizeof(vert_input));
         cmd_list->draw(4, 1, 0, 0);
     }
     else
@@ -210,12 +258,38 @@ void RenderingShaderManager::ApplyShader(command_list* cmd_list, resource_view s
 
 void RenderingShaderManager::CopyResource(command_list* cmd_list, resource_view srv_src, resource_view rtv_dst, uint32_t width, uint32_t height)
 {
-    ApplyShader(cmd_list, srv_src, rtv_dst, copyPipeline, copyPipelineLayout, copyPipelineSampler, width, height);
+    device* device = cmd_list->get_device();
+    DeviceDataContainer& data = device->get_private_data<DeviceDataContainer>();
+
+    ApplyShader(
+        cmd_list,
+        srv_src,
+        rtv_dst,
+        data.customShader.copyPipeline.pipeline,
+        data.customShader.copyPipeline.pipelineLayout,
+        data.customShader.copyPipeline.pipelineSampler,
+        data.customShader.fullscreenQuadVertexBuffer,
+        width,
+        height);
+
     cmd_list->get_private_data<state_tracking>().apply(cmd_list, true);
 }
 
 void RenderingShaderManager::CopyResourceMaskAlpha(reshade::api::command_list* cmd_list, reshade::api::resource_view srv_src, reshade::api::resource_view rtv_dst, uint32_t width, uint32_t height)
 {
-    ApplyShader(cmd_list, srv_src, rtv_dst, copyPipelineAlpha, copyPipelineLayout, copyPipelineSampler, width, height);
+    device* device = cmd_list->get_device();
+    DeviceDataContainer& data = device->get_private_data<DeviceDataContainer>();
+
+    ApplyShader(
+        cmd_list,
+        srv_src,
+        rtv_dst,
+        data.customShader.alphaPreservingCopyPipeline.pipeline,
+        data.customShader.alphaPreservingCopyPipeline.pipelineLayout,
+        data.customShader.alphaPreservingCopyPipeline.pipelineSampler,
+        data.customShader.fullscreenQuadVertexBuffer,
+        width,
+        height);
+
     cmd_list->get_private_data<state_tracking>().apply(cmd_list, true);
 }
