@@ -54,9 +54,9 @@ namespace Rendering
 
         void DisposePreview(reshade::api::device* runtime);
         void CheckPreview(reshade::api::command_list* cmd_list, reshade::api::device* device);
-        void SetPingPreviewHandles(reshade::api::resource* res, reshade::api::resource_view* rtv, reshade::api::resource_view* srv);
-        void SetPongPreviewHandles(reshade::api::resource* res, reshade::api::resource_view* rtv, reshade::api::resource_view* srv);
-        bool IsCompatibleWithPreviewFormat(reshade::api::effect_runtime* runtime, reshade::api::resource res, reshade::api::format view_format);
+        void SetPingPreviewHandles(reshade::api::device* device, reshade::api::resource* res, reshade::api::resource_view* rtv, reshade::api::resource_view* srv);
+        void SetPongPreviewHandles(reshade::api::device* device, reshade::api::resource* res, reshade::api::resource_view* rtv, reshade::api::resource_view* srv);
+        bool IsCompatibleWithPreviewFormat(reshade::api::device* device, reshade::api::resource res, reshade::api::format view_format);
 
         void OnEffectsReloading(reshade::api::effect_runtime* runtime);
         void OnEffectsReloaded(reshade::api::effect_runtime* runtime);
@@ -66,9 +66,6 @@ namespace Rendering
         void CheckResourceViews(reshade::api::effect_runtime* runtime);
 
         static EmbeddedResourceData GetResourceData(uint16_t id);
-
-        reshade::api::resource dummy_res;
-        reshade::api::resource_view dummy_rtv;
     private:
         static ResourceShimType ResolveResourceShimType(const std::string&);
 
@@ -80,10 +77,6 @@ namespace Rendering
 
         std::shared_mutex resource_mutex;
         std::shared_mutex view_mutex;
-
-        reshade::api::resource preview_res[2];
-        reshade::api::resource_view preview_rtv[2];
-        reshade::api::resource_view preview_srv[2];
 
         std::unordered_map<uint64_t, std::shared_ptr<GlobalResourceView>> global_resources;
         std::unordered_set<uint64_t> resources;

@@ -90,7 +90,7 @@ void RenderingPreviewManager::UpdatePreview(command_list* cmd_list, uint64_t cal
         //    return;
         //}
 
-        if (!resourceManager.IsCompatibleWithPreviewFormat(deviceData.current_runtime, rs, deviceData.huntPreview.view_format))
+        if (!resourceManager.IsCompatibleWithPreviewFormat(device, rs, deviceData.huntPreview.view_format))
         {
             deviceData.huntPreview.recreate_preview = true;
         }
@@ -103,8 +103,8 @@ void RenderingPreviewManager::UpdatePreview(command_list* cmd_list, uint64_t cal
             resource_view preview_pong_rtv = resource_view{ 0 };
             resource_view preview_ping_srv = resource_view{ 0 };
 
-            resourceManager.SetPingPreviewHandles(&previewResPing, nullptr, &preview_ping_srv);
-            resourceManager.SetPongPreviewHandles(&previewResPong, &preview_pong_rtv, nullptr);
+            resourceManager.SetPingPreviewHandles(device, &previewResPing, nullptr, &preview_ping_srv);
+            resourceManager.SetPongPreviewHandles(device, &previewResPong, &preview_pong_rtv, nullptr);
 
             if (previewResPong != 0 && (!group.getClearPreviewAlpha() || !supportsAlphaClear))
             {

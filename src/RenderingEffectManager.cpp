@@ -278,6 +278,7 @@ void RenderingEffectManager::PreventRuntimeReload(reshade::api::effect_runtime* 
         return;
 
     RuntimeDataContainer& runtimeData = runtime->get_private_data<RuntimeDataContainer>();
+    DeviceDataContainer& deviceData = runtime->get_device()->get_private_data<DeviceDataContainer>();
 
     // cringe
     if (runtimeData.specialEffects[REST_NOOP].technique != 0)
@@ -291,8 +292,8 @@ void RenderingEffectManager::PreventRuntimeReload(reshade::api::effect_runtime* 
         resource_view active_rtv = view->rtv;
         resource_view active_rtv_srgb = view->rtv_srgb;
 
-        if (resourceManager.dummy_rtv != 0)
-            runtime->render_technique(runtimeData.specialEffects[REST_NOOP].technique, cmd_list, resourceManager.dummy_rtv, resourceManager.dummy_rtv);
+        if (deviceData.resourceManagerData.dummy_rtv != 0)
+            runtime->render_technique(runtimeData.specialEffects[REST_NOOP].technique, cmd_list, deviceData.resourceManagerData.dummy_rtv, deviceData.resourceManagerData.dummy_rtv);
 
         runtime->render_technique(runtimeData.specialEffects[REST_NOOP].technique, cmd_list, active_rtv, active_rtv_srgb);
     }

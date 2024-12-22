@@ -129,6 +129,16 @@ struct __declspec(novtable) CustomShader final
     reshade::api::resource fullscreenQuadVertexBuffer = { 0 };
 };
 
+struct __declspec(novtable) ResouceManagerData final
+{
+    reshade::api::resource preview_res[2];
+    reshade::api::resource_view preview_rtv[2];
+    reshade::api::resource_view preview_srv[2];
+
+    reshade::api::resource dummy_res;
+    reshade::api::resource_view dummy_rtv;
+};
+
 struct __declspec(uuid("C63E95B1-4E2F-46D6-A276-E8B4612C069A")) DeviceDataContainer {
     reshade::api::effect_runtime* current_runtime = nullptr;
     std::atomic_bool rendered_effects = false;
@@ -139,6 +149,7 @@ struct __declspec(uuid("C63E95B1-4E2F-46D6-A276-E8B4612C069A")) DeviceDataContai
     std::unordered_set<const ShaderToggler::ToggleGroup*> srvUpdated;
     HuntPreview huntPreview;
     CustomShader customShader;
+    ResouceManagerData resourceManagerData;
 };
 
 struct __declspec(uuid("838BAF1D-95C0-4A7E-A517-052642879986")) RuntimeDataContainer {

@@ -374,8 +374,8 @@ void RenderingBindingManager::ClearUnmatchedTextureBindings(reshade::api::comman
         resource_view rtv_ping = resource_view{ 0 };
         resource_view rtv_pong = resource_view{ 0 };
 
-        resourceManager.SetPingPreviewHandles(nullptr, &rtv_ping, nullptr);
-        resourceManager.SetPongPreviewHandles(nullptr, &rtv_pong, nullptr);
+        resourceManager.SetPingPreviewHandles(cmd_list->get_device(), nullptr, &rtv_ping, nullptr);
+        resourceManager.SetPongPreviewHandles(cmd_list->get_device(), nullptr, &rtv_pong, nullptr);
 
         if (rtv_ping != 0)
         {

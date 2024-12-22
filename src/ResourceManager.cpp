@@ -57,6 +57,7 @@ void ResourceManager::InitBackbuffer(swapchain* runtime)
 {
     // Create backbuffer resource views
     device* dev = runtime->get_device();
+    DeviceDataContainer& data = dev->get_private_data<DeviceDataContainer>();
 
     resource_desc desc = dev->get_resource_desc(runtime->get_back_buffer(0));
 
@@ -64,30 +65,31 @@ void ResourceManager::InitBackbuffer(swapchain* runtime)
     dummy_desc.texture.height = 1;
     dummy_desc.texture.width = 1;
     
-    bool resCreated = runtime->get_device()->create_resource(dummy_desc, nullptr, resource_usage::render_target, &dummy_res);
+    bool resCreated = runtime->get_device()->create_resource(dummy_desc, nullptr, resource_usage::render_target, &data.resourceManagerData.dummy_res);
 
     if (resCreated)
     {
-        runtime->get_device()->create_resource_view(dummy_res, resource_usage::render_target, resource_view_desc{ desc.texture.format }, &dummy_rtv);
+        runtime->get_device()->create_resource_view(data.resourceManagerData.dummy_res, resource_usage::render_target, resource_view_desc{ desc.texture.format }, &data.resourceManagerData.dummy_rtv);
     }
 }
 
 void ResourceManager::ClearBackbuffer(reshade::api::swapchain* runtime)
 {
     device* dev = runtime->get_device();
+    DeviceDataContainer& data = dev->get_private_data<DeviceDataContainer>();
 
     uint32_t count = runtime->get_back_buffer_count();
 
-    if (dummy_res != 0)
+    if (data.resourceManagerData.dummy_res != 0)
     {
-        runtime->get_device()->destroy_resource(dummy_res);
-        dummy_res = { 0 };
+        runtime->get_device()->destroy_resource(data.resourceManagerData.dummy_res);
+        data.resourceManagerData.dummy_res = { 0 };
     }
 
-    if (dummy_rtv != 0)
+    if (data.resourceManagerData.dummy_rtv != 0)
     {
-        runtime->get_device()->destroy_resource_view(dummy_rtv);
-        dummy_rtv = { 0 };
+        runtime->get_device()->destroy_resource_view(data.resourceManagerData.dummy_rtv);
+        data.resourceManagerData.dummy_rtv = { 0 };
     }
 }
 
@@ -229,32 +231,36 @@ const std::shared_ptr<GlobalResourceView>& ResourceManager::GetResourceView(devi
 
 void ResourceManager::DisposePreview(reshade::api::device* device)
 {
-    if (preview_res[0] == 0 && preview_res[1] == 0)
+    if (device == nullptr)
+    {
+        return;
+    }
+
+    DeviceDataContainer& data = device->get_private_data<DeviceDataContainer>();
+
+    if (data.resourceManagerData.preview_res[0] == 0 && data.resourceManagerData.preview_res[1] == 0)
         return;
 
     for (uint32_t i = 0; i < 2; i++)
     {
-        if (device != nullptr)
+        if (data.resourceManagerData.preview_srv[i] != 0)
         {
-            if (preview_srv[i] != 0)
-            {
-                device->destroy_resource_view(preview_srv[i]);
-            }
-
-            if (preview_rtv[i] != 0)
-            {
-                device->destroy_resource_view(preview_rtv[i]);
-            }
-
-            if (preview_res[i] != 0)
-            {
-                device->destroy_resource(preview_res[i]);
-            }
+            device->destroy_resource_view(data.resourceManagerData.preview_srv[i]);
         }
 
-        preview_res[i] = resource{ 0 };
-        preview_srv[i] = resource_view{ 0 };
-        preview_rtv[i] = resource_view{ 0 };
+        if (data.resourceManagerData.preview_rtv[i] != 0)
+        {
+            device->destroy_resource_view(data.resourceManagerData.preview_rtv[i]);
+        }
+
+        if (data.resourceManagerData.preview_res[i] != 0)
+        {
+            device->destroy_resource(data.resourceManagerData.preview_res[i]);
+        }
+
+        data.resourceManagerData.preview_res[i] = resource{ 0 };
+        data.resourceManagerData.preview_srv[i] = resource_view{ 0 };
+        data.resourceManagerData.preview_rtv[i] = resource_view{ 0 };
     }
 }
 
@@ -315,17 +321,17 @@ void ResourceManager::CheckPreview(reshade::api::command_list* cmd_list, reshade
 
         for (uint32_t i = 0; i < 2; i++)
         {
-            if (!device->create_resource(preview_desc[i], nullptr, resource_usage::shader_resource, &preview_res[i]))
+            if (!device->create_resource(preview_desc[i], nullptr, resource_usage::shader_resource, &deviceData.resourceManagerData.preview_res[i]))
             {
                 reshade::log::message(reshade::log::level::error, "Failed to create preview render target!");
             }
 
-            if (preview_res[i] != 0 && !device->create_resource_view(preview_res[i], resource_usage::shader_resource, resource_view_desc(format_to_default_typed(deviceData.huntPreview.view_format, 0)), &preview_srv[i]))
+            if (deviceData.resourceManagerData.preview_res[i] != 0 && !device->create_resource_view(deviceData.resourceManagerData.preview_res[i], resource_usage::shader_resource, resource_view_desc(format_to_default_typed(deviceData.huntPreview.view_format, 0)), &deviceData.resourceManagerData.preview_srv[i]))
             {
                 reshade::log::message(reshade::log::level::error, "Failed to create preview shader resource view!");
             }
 
-            if (preview_res[i] != 0 && !device->create_resource_view(preview_res[i], resource_usage::render_target, resource_view_desc(format_to_default_typed(deviceData.huntPreview.view_format, 0)), &preview_rtv[i]))
+            if (deviceData.resourceManagerData.preview_res[i] != 0 && !device->create_resource_view(deviceData.resourceManagerData.preview_res[i], resource_usage::render_target, resource_view_desc(format_to_default_typed(deviceData.huntPreview.view_format, 0)), &deviceData.resourceManagerData.preview_rtv[i]))
             {
                 reshade::log::message(reshade::log::level::error, "Failed to create preview render target view!");
             }
@@ -333,40 +339,46 @@ void ResourceManager::CheckPreview(reshade::api::command_list* cmd_list, reshade
     }
 }
 
-void ResourceManager::SetPingPreviewHandles(reshade::api::resource* res, reshade::api::resource_view* rtv, reshade::api::resource_view* srv)
+void ResourceManager::SetPingPreviewHandles(reshade::api::device* device, reshade::api::resource* res, reshade::api::resource_view* rtv, reshade::api::resource_view* srv)
 {
-    if (preview_res[0] != 0)
+    DeviceDataContainer& deviceData = device->get_private_data<DeviceDataContainer>();
+
+    if (deviceData.resourceManagerData.preview_res[0] != 0)
     {
         if(res != nullptr)
-            *res = preview_res[0];
+            *res = deviceData.resourceManagerData.preview_res[0];
         if(rtv != nullptr)
-            *rtv = preview_rtv[0];
+            *rtv = deviceData.resourceManagerData.preview_rtv[0];
         if(srv != nullptr)
-            *srv = preview_srv[0];
+            *srv = deviceData.resourceManagerData.preview_srv[0];
     }
 }
 
-void ResourceManager::SetPongPreviewHandles(reshade::api::resource* res, reshade::api::resource_view* rtv, reshade::api::resource_view* srv)
+void ResourceManager::SetPongPreviewHandles(reshade::api::device* device, reshade::api::resource* res, reshade::api::resource_view* rtv, reshade::api::resource_view* srv)
 {
-    if (preview_res[1] != 0)
+    DeviceDataContainer& deviceData = device->get_private_data<DeviceDataContainer>();
+
+    if (deviceData.resourceManagerData.preview_res[1] != 0)
     {
         if (res != nullptr)
-            *res = preview_res[1];
+            *res = deviceData.resourceManagerData.preview_res[1];
         if (rtv != nullptr)
-            *rtv = preview_rtv[1];
+            *rtv = deviceData.resourceManagerData.preview_rtv[1];
         if (srv != nullptr)
-            *srv = preview_srv[1];
+            *srv = deviceData.resourceManagerData.preview_srv[1];
     }
 }
 
-bool ResourceManager::IsCompatibleWithPreviewFormat(reshade::api::effect_runtime* runtime, reshade::api::resource res, reshade::api::format view_format)
+bool ResourceManager::IsCompatibleWithPreviewFormat(reshade::api::device* device, reshade::api::resource res, reshade::api::format view_format)
 {
-    if (preview_res[0] == 0 || res == 0)
+    DeviceDataContainer& deviceData = device->get_private_data<DeviceDataContainer>();
+
+    if (deviceData.resourceManagerData.preview_res[0] == 0 || res == 0)
         return false;
 
-    resource_desc res_desc = runtime->get_device()->get_resource_desc(res);
-    resource_desc preview_desc = runtime->get_device()->get_resource_desc(preview_res[0]);
-    resource_view_desc preview_view_desc = runtime->get_device()->get_resource_view_desc(preview_srv[0]);
+    resource_desc res_desc = device->get_resource_desc(res);
+    resource_desc preview_desc = device->get_resource_desc(deviceData.resourceManagerData.preview_res[0]);
+    resource_view_desc preview_view_desc = device->get_resource_view_desc(deviceData.resourceManagerData.preview_srv[0]);
 
     if ((format_to_typeless(view_format) == format_to_typeless(preview_view_desc.format)) &&
         res_desc.texture.width == preview_desc.texture.width &&
