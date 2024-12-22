@@ -23,7 +23,7 @@ void RenderingBindingManager::InitTextureBingings(effect_runtime* runtime)
     DeviceDataContainer& data = runtime->get_device()->get_private_data<DeviceDataContainer>();
 
     // Init empty texture
-    CreateTextureBinding(runtime, &empty_res, &empty_srv, &empty_rtv, reshade::api::format::r8g8b8a8_unorm);
+    CreateTextureBinding(runtime, &data.bindingManagerData.empty_res, &data.bindingManagerData.empty_srv, &data.bindingManagerData.empty_rtv, reshade::api::format::r8g8b8a8_unorm);
 }
 
 void RenderingBindingManager::DisposeTextureBindings(device* device, std::unordered_map<int, ShaderToggler::ToggleGroup>& groups)
@@ -32,22 +32,22 @@ void RenderingBindingManager::DisposeTextureBindings(device* device, std::unorde
 
     unique_lock<shared_mutex> lock(data.binding_mutex);
 
-    if (empty_res != 0)
+    if (data.bindingManagerData.empty_res != 0)
     {
-        device->destroy_resource(empty_res);
-        empty_res = { 0 };
+        device->destroy_resource(data.bindingManagerData.empty_res);
+        data.bindingManagerData.empty_res = { 0 };
     }
 
-    if (empty_rtv != 0)
+    if (data.bindingManagerData.empty_rtv != 0)
     {
-        device->destroy_resource_view(empty_rtv);
-        empty_rtv = { 0 };
+        device->destroy_resource_view(data.bindingManagerData.empty_rtv);
+        data.bindingManagerData.empty_rtv = { 0 };
     }
 
-    if (empty_srv != 0)
+    if (data.bindingManagerData.empty_srv != 0)
     {
-        device->destroy_resource_view(empty_srv);
-        empty_srv = { 0 };
+        device->destroy_resource_view(data.bindingManagerData.empty_srv);
+        data.bindingManagerData.empty_srv = { 0 };
     }
 
     effect_runtime* runtime = data.current_runtime;
@@ -132,7 +132,7 @@ uint32_t RenderingBindingManager::UpdateTextureBinding(effect_runtime* runtime, 
         groupResource.target_description = desc;
         groupResource.view_format = viewformat;
         groupResource.state = ShaderToggler::GroupResourceState::RESOURCE_INVALID;
-        runtime->update_texture_bindings(group->getTextureBindingName().c_str(), empty_srv, empty_srv);
+        runtime->update_texture_bindings(group->getTextureBindingName().c_str(), data.bindingManagerData.empty_srv, data.bindingManagerData.empty_srv);
 
         return 0;
     }
@@ -357,9 +357,9 @@ void RenderingBindingManager::ClearUnmatchedTextureBindings(reshade::api::comman
         ToggleGroup& group = groupData.second;
         GroupResource& resources = group.GetGroupResource(ShaderToggler::GroupResourceType::RESOURCE_BINDING);
 
-        if (!data.bindingsUpdated.contains(&group) && (resources.clear_on_miss() && empty_srv != 0 && resources.state != ShaderToggler::GroupResourceState::RESOURCE_CLEARED))
+        if (!data.bindingsUpdated.contains(&group) && (resources.clear_on_miss() && data.bindingManagerData.empty_srv != 0 && resources.state != ShaderToggler::GroupResourceState::RESOURCE_CLEARED))
         {
-            data.current_runtime->update_texture_bindings(group.getTextureBindingName().c_str(), empty_srv, empty_srv);
+            data.current_runtime->update_texture_bindings(group.getTextureBindingName().c_str(), data.bindingManagerData.empty_srv, data.bindingManagerData.empty_srv);
             resources.state = ShaderToggler::GroupResourceState::RESOURCE_CLEARED;
 
             if (!resources.owning)

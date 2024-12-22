@@ -23,10 +23,6 @@ namespace Rendering
         ResourceManager& resourceManager;
         ToggleGroupResourceManager& toggleGroupResources;
 
-        reshade::api::resource empty_res = { 0 };
-        reshade::api::resource_view empty_srv = { 0 };
-        reshade::api::resource_view empty_rtv = { 0 };
-
         void _UpdateTextureBindings(reshade::api::command_list* cmd_list,
             DeviceDataContainer& deviceData,
             const binding_queue& bindingsToUpdate,

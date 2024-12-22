@@ -131,12 +131,19 @@ struct __declspec(novtable) CustomShader final
 
 struct __declspec(novtable) ResouceManagerData final
 {
-    reshade::api::resource preview_res[2];
-    reshade::api::resource_view preview_rtv[2];
-    reshade::api::resource_view preview_srv[2];
+    reshade::api::resource preview_res[2] = { { 0 }, { 0 } };
+    reshade::api::resource_view preview_rtv[2] = { { 0 }, { 0 } };
+    reshade::api::resource_view preview_srv[2] = { { 0 }, { 0 } };
 
-    reshade::api::resource dummy_res;
-    reshade::api::resource_view dummy_rtv;
+    reshade::api::resource dummy_res = { 0 };
+    reshade::api::resource_view dummy_rtv = { 0 };
+};
+
+struct __declspec(novtable) BindingManagerData final
+{
+    reshade::api::resource empty_res = { 0 };
+    reshade::api::resource_view empty_srv = { 0 };
+    reshade::api::resource_view empty_rtv = { 0 };
 };
 
 struct __declspec(uuid("C63E95B1-4E2F-46D6-A276-E8B4612C069A")) DeviceDataContainer {
@@ -150,6 +157,7 @@ struct __declspec(uuid("C63E95B1-4E2F-46D6-A276-E8B4612C069A")) DeviceDataContai
     HuntPreview huntPreview;
     CustomShader customShader;
     ResouceManagerData resourceManagerData;
+    BindingManagerData bindingManagerData;
 };
 
 struct __declspec(uuid("838BAF1D-95C0-4A7E-A517-052642879986")) RuntimeDataContainer {
