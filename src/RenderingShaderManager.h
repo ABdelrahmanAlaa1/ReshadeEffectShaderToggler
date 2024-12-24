@@ -48,12 +48,6 @@ class __declspec(novtable) RenderingShaderManager final {
                      reshade::api::resource& quad,
                      uint32_t width,
                      uint32_t height);
-    bool CreatePipeline(reshade::api::device* device,
-                        reshade::api::pipeline_layout layout,
-                        uint16_t ps_resource_id,
-                        uint16_t vs_resource_id,
-                        reshade::api::pipeline& sh_pipeline,
-                        uint8_t write_mask = 0xF);
 
     AddonImGui::AddonUIData& uiData;
     ResourceManager& resourceManager;
