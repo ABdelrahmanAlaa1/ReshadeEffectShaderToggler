@@ -18,18 +18,23 @@
 /// </summary>
 
 namespace StateTracking {
-constexpr reshade::api::pipeline_stage ALL_PIPELINE_STAGES[] = { reshade::api::pipeline_stage::pixel_shader,   reshade::api::pipeline_stage::vertex_shader,
-                                                                 reshade::api::pipeline_stage::compute_shader, reshade::api::pipeline_stage::depth_stencil,
-                                                                 reshade::api::pipeline_stage::domain_shader,  reshade::api::pipeline_stage::geometry_shader,
-                                                                 reshade::api::pipeline_stage::hull_shader,    reshade::api::pipeline_stage::input_assembler,
-                                                                 reshade::api::pipeline_stage::output_merger,  reshade::api::pipeline_stage::rasterizer,
-                                                                 reshade::api::pipeline_stage::stream_output };
+constexpr reshade::api::pipeline_stage ALL_PIPELINE_STAGES[] = {
+    reshade::api::pipeline_stage::pixel_shader,       reshade::api::pipeline_stage::vertex_shader,   reshade::api::pipeline_stage::compute_shader,
+    reshade::api::pipeline_stage::depth_stencil,      reshade::api::pipeline_stage::domain_shader,   reshade::api::pipeline_stage::geometry_shader,
+    reshade::api::pipeline_stage::hull_shader,        reshade::api::pipeline_stage::input_assembler, reshade::api::pipeline_stage::output_merger,
+    reshade::api::pipeline_stage::rasterizer,         reshade::api::pipeline_stage::stream_output,   reshade::api::pipeline_stage::amplification_shader,
+    reshade::api::pipeline_stage::ray_tracing_shader, reshade::api::pipeline_stage::mesh_shader
+};
 
 constexpr uint32_t ALL_PIPELINE_STAGES_SIZE = sizeof(ALL_PIPELINE_STAGES) / sizeof(reshade::api::pipeline_stage);
 
-constexpr reshade::api::shader_stage ALL_SHADER_STAGES[] = { reshade::api::shader_stage::pixel,    reshade::api::shader_stage::vertex,
-                                                             reshade::api::shader_stage::compute,  reshade::api::shader_stage::hull,
-                                                             reshade::api::shader_stage::geometry, reshade::api::shader_stage::domain };
+constexpr reshade::api::shader_stage ALL_SHADER_STAGES[] = { reshade::api::shader_stage::pixel,         reshade::api::shader_stage::vertex,
+                                                             reshade::api::shader_stage::compute,       reshade::api::shader_stage::hull,
+                                                             reshade::api::shader_stage::geometry,      reshade::api::shader_stage::domain,
+                                                             reshade::api::shader_stage::amplification, reshade::api::shader_stage::any_hit,
+                                                             reshade::api::shader_stage::callable,      reshade::api::shader_stage::closest_hit,
+                                                             reshade::api::shader_stage::intersection,  reshade::api::shader_stage::mesh,
+                                                             reshade::api::shader_stage::miss,          reshade::api::shader_stage::raygen };
 
 constexpr uint32_t ALL_SHADER_STAGES_SIZE = sizeof(ALL_SHADER_STAGES) / sizeof(reshade::api::shader_stage);
 

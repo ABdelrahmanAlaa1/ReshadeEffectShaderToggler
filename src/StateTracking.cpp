@@ -19,11 +19,11 @@ void state_block::apply_descriptors_dx12_vulkan(command_list* cmd_list) const {
         const auto& [pipelinelayout, root_table] = root_tables[stageIdx];
         shader_stage stages = root_table_stages[stageIdx];
 
-        if ((static_cast<uint32_t>(stages) | shader_stages_set) <= shader_stages_set) {
-            continue;
-        }
-
-        shader_stages_set |= static_cast<uint32_t>(stages);
+        // if ((static_cast<uint32_t>(stages) | shader_stages_set) <= shader_stages_set) {
+        //     continue;
+        // }
+        //
+        // shader_stages_set |= static_cast<uint32_t>(stages);
 
         // Restore root signature and descriptor heaps
         if (pipelinelayout != 0) {
